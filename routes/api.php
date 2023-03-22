@@ -23,7 +23,7 @@ use App\Http\Controllers\Api\SiteMapController;
 |
 */
 
-Route::group(['middleware' => 'cors'], function(){
+//Route::group(['middleware' => 'cors'], function(){
     Route::post('users/login', [AuthController::class, 'login']);
     Route::post('users/register', [AuthController::class, 'register']);
     //
@@ -52,9 +52,9 @@ Route::group(['middleware' => 'cors'], function(){
     Route::get('sitemap', [SiteMapController::class, 'siteMap']);
     //
     Route::get('search', [SearchController::class, 'search']);
-});
+// });
 
-Route::group(['middleware' => ['auth:api', 'cors']], function(){
+// Route::group(['middleware' => ['auth:api', 'cors']], function(){
     Route::get('current_user/logout', [AuthController::class, 'logoutUser']);
     Route::get('current_user', [AuthController::class, 'currentUser']);
     //
@@ -92,4 +92,4 @@ Route::group(['middleware' => ['auth:api', 'cors']], function(){
     Route::get('comments/{slug}/delete', [CommentController::class, 'deleteCommentConfirm']);
     Route::post('favorite_comment', [CommentController::class, 'favoriteComment']);
     Route::delete('favorite_comment', [CommentController::class, 'unFavoriteComment']);
-});
+// });

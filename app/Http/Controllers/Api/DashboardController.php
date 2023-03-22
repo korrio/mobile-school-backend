@@ -31,8 +31,11 @@ class DashboardController extends ApiController
             return $this->respondNotFound();
         }
 
+
+
         $post = Post::whereHas('user', function($q) {
-            $q->where('user_name', auth()->user()->user_name);
+            // $q->where('user_name', auth()->user()->user_name);
+            $q->where('user_name', "korrio");
         });
 
         if ($sortBy == 'created_at') {
@@ -54,7 +57,8 @@ class DashboardController extends ApiController
         $offset = $request->get('offset', 0);
 
         $post = Post::whereHas('userfavorite', function($q) {
-            $q->where('user_name', auth()->user()->user_name);
+            // $q->where('user_name', auth()->user()->user_name);
+            $q->where('user_name', 'korrio');
         });
 
         $postsCount = $post->get()->count();
