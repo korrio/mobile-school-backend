@@ -1,3 +1,7 @@
+gcloud config set project aq2023
+gcloud run deploy mobileschool --source .
+
+
 <p align="center">
     <a href="https://github.com/libeyondea/backend-forum-example/issues"><img alt="GitHub issues"
             src="https://img.shields.io/github/issues/libeyondea/backend-forum-example"></a>
