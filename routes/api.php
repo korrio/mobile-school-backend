@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\SiteMapController;
 */
 
 Route::group(['middleware' => 'cors'], function(){
+    Route::post('users/login_line', [AuthController::class, 'login_line']);
     Route::post('users/login', [AuthController::class, 'login']);
     Route::post('users/register', [AuthController::class, 'register']);
     //

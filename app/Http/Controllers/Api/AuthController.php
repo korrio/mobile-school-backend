@@ -70,7 +70,11 @@ class AuthController extends ApiController
         if ($request->provider == 'facebook') {
             return $this->checkFacebook($request->access_token);
         } else if ($request->provider == 'google') {
-            return $this->checkGoogle($request->access_token);
+            return $this->checkGoogle($request->line_access_token);
+        } else if ($request->provider == 'line') {
+            // print_r($request);
+            // echo $request->line_access_token;
+            return $this->checkLine($request->line_access_token);
         }
 
         $credentials = request(['user_name', 'password']);
@@ -110,6 +114,22 @@ class AuthController extends ApiController
             $checkToken = $this->client->get("https://www.googleapis.com/oauth2/v3/userinfo?access_token=$access_token");
             $responseGoogle = json_decode($checkToken->getBody()->getContents(), true);
             return $this->checkUserGoogle($responseGoogle);
+        } catch (Exception $e) {
+            return $this->respondInternalError($e->getMessage());
+        }
+    }
+
+    public function checkLine($access_token)
+    {
+        try {
+            $checkToken ->request('GET', 'https://api.line.me/oauth2/v2.1/userinfo', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $access_token
+                ]
+            ]);
+            // $checkToken = $this->client->get("https://api.line.me/oauth2/v2.1/userinfo?access_token=$access_token");
+            $responseLine = json_decode($checkToken->getBody()->getContents(), true);
+            return $this->checkUserLine($responseLine);
         } catch (Exception $e) {
             return $this->respondInternalError($e->getMessage());
         }
@@ -183,6 +203,64 @@ class AuthController extends ApiController
 
                 if (!User::where('email', $profile['email'])->first()) {
                     $user->email = $profile['email'];
+                    $user->email_verified_at = Carbon::now();
+                } else {
+                    $user->email = '';
+                }
+                $user->save();
+            }
+
+            $tokenResult = $user->createToken('Personal Access Client');
+
+            return $this->respondSuccess([
+                'id' => $user->id,
+                'user_name' => $user->user_name,
+                'avatar' => $user->avatar,
+                'access_token' => $tokenResult->accessToken,
+                'token_type' => 'Bearer',
+                'expires_at' => Carbon::parse(
+                    $tokenResult->token->expires_at
+                )->toDateTimeString()
+            ]);
+        } catch (Exception $e) {
+            return $this->respondInternalError($e->getMessage());
+        }
+    }
+
+    public function login_line(Request $request)
+
+    {
+        $profile = $request->profile;
+
+        // print_r($profile);
+
+        // {"userId":"U6e9c209a318c015248078c27c5b55d35","displayName":"Korr iPhone","statusMessage":"คำถามจะบอก\"ทิศ\"\nคำตอบจะบอก \"ทาง\"","pictureUrl":"https://profile.line-scdn.net/0hNHi5pLqfEWdETD1bZ3FvGDQcEg1nPUh1O3gKA3lPHV4tL140OyJbVSZIH1R8fQFkOH0JAiRLGlRIX2YBWhrtU0N8T1B9eFE1YStYiA"}
+  //profile: {
+  //   id: 'U6e9c209a318c015248078c27c5b55d35',
+  //   name: 'Korr iPhone',
+  //   email: undefined,
+  //   image: 'https://profile.line-scdn.net/0hNHi52DQVEWdUTD1bZ3FuMGgJHwojYhcvLHkMVXNETAVwKAU5bXlWBCUbSwd6eVdmPXoJVnIZSAJ6'
+  // },
+        try {
+            $user = User::where('facebook_id', $profile['id'])->first();
+            if (!$user) {
+
+                $avatarContent = $profile['image'];
+                $avatarName = time() . '.jpg';
+                Storage::disk('images')->put($avatarName, file_get_contents($avatarContent));
+
+                $user = new User;
+                $user->facebook_id = $profile['id'];
+                $user->first_name = $profile['name'];
+                $user->last_name = '';
+                $user->user_name = '' . $profile['id'];
+                $user->password = bcrypt($profile['id']);
+                $user->avatar = $avatarName;
+                $user->gender = 'unknown';
+                $user->role_id = Role::where('slug', 'user')->first()->id;
+
+                if (!User::where('email', $profile['id'] . '@line.me')->first()) {
+                    $user->email = $profile['id'] . '@line.me';
                     $user->email_verified_at = Carbon::now();
                 } else {
                     $user->email = '';
