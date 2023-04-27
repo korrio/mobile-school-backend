@@ -189,16 +189,16 @@ class PostController extends ApiController
 
         foreach ($request->tags as $key => $tags) {
             $convertTitleToSlug = Str::slug($tags['slug'], '-');
-            $checkTag = Tag::where('slug', $convertTitleToSlug)->first();
+            $checkTag = Tag::where('slug', $tags['slug'])->first();
             if (!$checkTag) {
                 $newTag = new Tag;
-                $newTag->title = $convertTitleToSlug;
-                $newTag->slug = $convertTitleToSlug;
-                $newTag->content = $convertTitleToSlug;
+                $newTag->title = $tags['slug'];
+                $newTag->slug = $convertTitleToSlug . '-' . Str::lower(Str::random(4));
+                $newTag->content = $tags['slug'];
                 $newTag->save();
                 $tagId = $newTag->id;
             } else {
-                $tagId = Tag::where('slug', $convertTitleToSlug)->first()->id;
+                $tagId = Tag::where('slug', $tags['slug'])->first()->id;
             }
             $checkPostTag = PostTag::where('post_id', $lastIdPost)->where('tag_id', $tagId)->first();
             if (!$checkPostTag) {
