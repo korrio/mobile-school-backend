@@ -34,8 +34,8 @@ class DashboardController extends ApiController
 
 
         $post = Post::whereHas('user', function($q) {
-            // $q->where('user_name', auth()->user()->user_name);
-            $q->where('user_name', "korrio");
+            $q->where('user_name', auth()->user()->user_name);
+            // $q->where('user_name', "korrio");
         });
 
         if ($sortBy == 'created_at') {
