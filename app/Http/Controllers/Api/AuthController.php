@@ -122,14 +122,74 @@ class AuthController extends ApiController
     public function checkLine($access_token)
     {
         try {
-            $checkToken ->request('GET', 'https://api.line.me/oauth2/v2.1/userinfo', [
+            $checkToken = $this->client->get('https://api.line.me/v2/profile', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $access_token
                 ]
             ]);
-            // $checkToken = $this->client->get("https://api.line.me/oauth2/v2.1/userinfo?access_token=$access_token");
+
+//             {
+//   "userId": "U6e9c209a318c015248078c27c5b55d35",
+//   "displayName": "Korr iPhone",
+//   "statusMessage": "คำถามจะบอก\"ทิศ\"\nคำตอบจะบอก \"ทาง\"",
+//   "pictureUrl": "https://profile.line-scdn.net/0hNHi5pLqfEWdETD1bZ3FvGDQcEg1nPUh1O3gKA3lPHV4tL140OyJbVSZIH1R8fQFkOH0JAiRLGlRIX2YBWhrtU0N8T1B9eFE1YStYiA"
+// }
+
             $responseLine = json_decode($checkToken->getBody()->getContents(), true);
+            // return $responseLine;
             return $this->checkUserLine($responseLine);
+        } catch (Exception $e) {
+            return $this->respondInternalError($e->getMessage());
+        }
+    }
+
+    public function checkUserLine($profile)
+    {
+        try {
+            $user = User::where('facebook_id', $profile['userId'])->first();
+            if (!$user) {
+
+                $avatarContent = $profile['pictureUrl'];
+                $avatarName = time() . '.jpg';
+                Storage::disk('images')->put($avatarName, file_get_contents($avatarContent));
+
+                $user = new User;
+                $user->facebook_id = $profile['userId'];
+                $user->first_name = $profile['displayName'];
+                $user->last_name = '';
+                $user->user_name = '' . $profile['userId'];
+                $user->password = bcrypt(Str::random(9));
+                $user->avatar = $avatarName;
+                $user->gender = 'unknown';
+                $user->role_id = Role::where('slug', 'user')->first()->id;
+
+                if(isset($profile['email']))
+                    $email = $profile['email'];
+                else
+                    $email = $profile['userId'] . "@line.me";;
+
+                if (!User::where('email', $email)->first()) {
+                    // $user->email = $profile['email'];
+                    $user->email = $email;
+                    $user->email_verified_at = Carbon::now();
+                } else {
+                    $user->email = '';
+                }
+                $user->save();
+            }
+
+            $tokenResult = $user->createToken('Personal Access Client');
+
+            return $this->respondSuccess([
+                'id' => $user->id,
+                'user_name' => $user->user_name,
+                'avatar' => $user->avatar,
+                'access_token' => $tokenResult->accessToken,
+                'token_type' => 'Bearer',
+                'expires_at' => Carbon::parse(
+                    $tokenResult->token->expires_at
+                )->toDateTimeString()
+            ]);
         } catch (Exception $e) {
             return $this->respondInternalError($e->getMessage());
         }
@@ -301,7 +361,8 @@ class AuthController extends ApiController
             'user_name' => auth()->user()->user_name,
             'first_name' => auth()->user()->first_name,
             'last_name' => auth()->user()->last_name,
-            'avatar' => auth()->user()->avatar
+            'avatar' => auth()->user()->avatar,
+            'line_uid' => auth()->user()->facebook_id
         ]);
     }
 
